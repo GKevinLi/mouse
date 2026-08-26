@@ -25,7 +25,7 @@ config SAMPLE_BT_HIDS_SECURITY_MITM
 	bool "Passkey display MITM protection"
 	depends on SAMPLE_BT_HIDS_SECURITY
 	depends on PRINTK
-	default y
+	default n
 	help
 	  Enable displaying passkey for Man-In-The-Middle (MITM) protection.
 	  Implementation uses the "printk" function to display the passkey.
@@ -34,6 +34,12 @@ config SAMPLE_BT_DIRECTED_ADVERTISING
 	bool "Directed advertising"
 	default y
 	depends on SAMPLE_BT_HIDS_SECURITY
+
+config BOARD_ENABLE_DCDC
+    bool "Enable DCDC mode"
+    default n
+    select SOC_DCDC_NRF52X
+    depends on BOARD_NRF52833DK_NRF52833
 
 endmenu
 

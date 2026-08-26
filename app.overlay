@@ -1,0 +1,73 @@
+/ {
+
+	custom {
+		compatible = "gpio-leds";
+		cs: cs_pin {
+			gpios = <&gpio0 17 GPIO_ACTIVE_LOW>;
+		};
+
+		motion: motion_pin {
+			gpios = <&gpio0 10 GPIO_ACTIVE_LOW>;
+		};
+
+		sdio: sdio_pin {
+			gpios = <&gpio0 0 GPIO_ACTIVE_HIGH>;
+		};
+
+		sclk: sclk_pin {
+			gpios = <&gpio0 1 GPIO_ACTIVE_HIGH>;
+		};
+
+		scroll_a: scroll_a_pin {
+			gpios = <&gpio0 30 GPIO_ACTIVE_HIGH>;
+		};
+
+		scroll_b: scroll_b_pin {
+			gpios = <&gpio0 9 GPIO_ACTIVE_HIGH>;
+		};
+
+
+	};
+
+	buttons {
+		compatible = "gpio-keys";
+
+		button0: button_0 {
+			gpios = <&gpio0 29 (GPIO_PULL_UP | GPIO_ACTIVE_LOW)>;
+			label = "Push button switch 0";
+			zephyr,code = <INPUT_KEY_0>;
+		};
+
+		button1: button_1 {
+			gpios = <&gpio0 2 (GPIO_PULL_UP | GPIO_ACTIVE_LOW)>;
+			label = "Push button switch 1";
+			zephyr,code = <INPUT_KEY_1>;
+		};
+
+		button2: button_2 {
+			gpios = <&gpio0 28 (GPIO_PULL_UP | GPIO_ACTIVE_LOW)>;
+			label = "Push button switch 2";
+			zephyr,code = <INPUT_KEY_2>;
+		};
+
+		button3: button_3 {
+			gpios = <&gpio0 4 (GPIO_PULL_UP | GPIO_ACTIVE_LOW)>;
+			label = "Push button switch 3";
+			zephyr,code = <INPUT_KEY_3>;
+		};
+
+		button4: button_4 {
+			gpios = <&gpio0 20 (GPIO_PULL_UP | GPIO_ACTIVE_LOW)>;
+			label = "Push button switch 4";
+			zephyr,code = <INPUT_KEY_4>;
+		};
+	};
+
+	aliases {
+		
+		sw4 = &button4;
+
+	};
+
+
+};

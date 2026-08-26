@@ -4,17 +4,6 @@
  * SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
  */
 
-
-
-/*
-future changelog
-
-- check to see if moving out of LDO mode breaks the code
-- figure out how to send custom button on hid reportmap
-
-
-*/
-
 #include <zephyr/types.h>
 #include <stddef.h>
 #include <string.h>
@@ -24,6 +13,7 @@ future changelog
 #include <zephyr/kernel.h>
 #include <soc.h>
 #include <assert.h>
+//#include <algorithm>
 
 #include <zephyr/settings/settings.h>
 
@@ -48,7 +38,6 @@ future changelog
 #include <zephyr/sys/printk.h>
 
 #include "pmw3610_driver.h"
-#include "scrollWheel.h"
 
 LOG_MODULE_REGISTER(MOUSLOG,LOG_LEVEL_DBG);
 
@@ -107,10 +96,6 @@ struct mouse_pos {
 	int16_t y_val;
 	uint8_t buttons;
 };
-
-uint8_t prevButtons = 0;
-
-bool sleepMode = false;
 
 //const struct gpio_dt_spec buttonPin1 = GPIO_DT_SPEC_GET(DT_NODELABEL(sdio), gpios);
 //const struct gpio_dt_spec buttonPin2 = GPIO_DT_SPEC_GET(DT_NODELABEL(sclk), gpios);
@@ -564,6 +549,7 @@ static void hid_init(void)
 	hids_init_param.info.b_country_code = 0x00;
 	hids_init_param.info.flags = (BT_HIDS_REMOTE_WAKE |
 				      BT_HIDS_NORMALLY_CONNECTABLE);
+					  //
 
 	hids_inp_rep = &hids_init_param.inp_rep_group_init.reports[0];
 	hids_inp_rep->size = INPUT_REP_BUTTONS_LEN;
@@ -617,10 +603,11 @@ static void mouse_movement_send(int16_t x_delta, int16_t y_delta, uint8_t button
 				int16_t x = MAX(MIN(x_delta, 0x07ff), -0x07ff);
 				int16_t y = MAX(MIN(y_delta, 0x07ff), -0x07ff);
 
+				/* Convert to little-endian. */
 				sys_put_le16(x, x_buff);
 				sys_put_le16(y, y_buff);
 
-				
+				/* Encode report. */
 				BUILD_ASSERT(sizeof(buffer) == 3,
 					 "Only 2 axis, 12-bit each, are supported");
 
@@ -638,7 +625,7 @@ static void mouse_movement_send(int16_t x_delta, int16_t y_delta, uint8_t button
 
 			//Send Button and Scroll Wheel Data
 
-			if(buttons != prevButtons || scrollWheel != 0) {
+			//if(buttons != 0 || scrollWheel != 0) {
 				uint8_t buffer2[3];
 
 				buffer2[0] = buttons;
@@ -649,8 +636,7 @@ static void mouse_movement_send(int16_t x_delta, int16_t y_delta, uint8_t button
 						  INPUT_REP_BUTTONS_INDEX,
 						  buffer2, sizeof(buffer2), NULL);
 
-			}
-			prevButtons = buttons;
+			//}
 
 		}
 	}
@@ -695,6 +681,28 @@ static void pairing_failed(struct bt_conn *conn, enum bt_security_err reason)
 {
 	char addr[BT_ADDR_LE_STR_LEN];
 
+	// if (IS_ENABLED(CONFIG_SAMPLE_BT_HIDS_SECURITY_MITM)) {
+	// 	struct pairing_data_mitm pairing_data;
+
+	// 	k_sched_lock();
+	// 	uint32_t cnt = k_msgq_num_used_get(&mitm_queue);
+
+	// 	for (size_t i = 0; i < cnt; i++) {
+	// 		int err = k_msgq_get(&mitm_queue, &pairing_data, K_NO_WAIT);
+
+	// 		__ASSERT(!err, "k_msgq_get failed: %d", err);
+
+	// 		if (pairing_data.conn == conn) {
+	// 			bt_conn_unref(pairing_data.conn);
+	// 		} else {
+	// 			err = k_msgq_put(&mitm_queue, &pairing_data,
+	// 					 K_NO_WAIT);
+	// 			__ASSERT(!err, "k_msgq_put failed: %d", err);
+	// 		}
+	// 	}
+	// 	k_sched_unlock();
+	// }
+
 	bt_addr_le_to_str(bt_conn_get_dst(conn), addr, sizeof(addr));
 
 	printk("Pairing failed conn: %s, reason %d %s\n", addr, reason,
@@ -708,7 +716,9 @@ static struct bt_conn_auth_info_cb conn_auth_info_callbacks = {
 };
 #else
 static struct bt_conn_auth_info_cb conn_auth_info_callbacks;
-#endif 
+#endif /* defined(CONFIG_SAMPLE_BT_HIDS_SECURITY) */
+
+
 
 
 void button_changed(uint32_t button_state, uint32_t has_changed)
@@ -829,61 +839,71 @@ int main(void)
 
 
 
-	pmw3610_init();
+
+
+	if (!gpio_is_ready_dt(&cs_pin)) {
+    	return 0;
+	}
+    if (!gpio_is_ready_dt(&sdio_pin)) {
+    	return 0;
+	}
+    if (!gpio_is_ready_dt(&sclk_pin)) {
+    	return 0;
+	}
+	if (!gpio_is_ready_dt(&motion_pin)) {
+    	return 0;
+	}
+
+	gpio_pin_configure_dt(&motion_pin, GPIO_INPUT);
+	gpio_pin_configure_dt(&cs_pin, GPIO_OUTPUT_INACTIVE);
+	gpio_pin_configure_dt(&sclk_pin, GPIO_OUTPUT_ACTIVE);
+	gpio_pin_configure_dt(&sdio_pin, GPIO_OUTPUT_INACTIVE);
+
+	gpio_pin_set_dt(&sclk_pin, 1);
+	gpio_pin_set_dt(&sdio_pin, 0);
+	gpio_pin_set_dt(&cs_pin, 0);
+	
+	k_msleep(20); 
+
+	bitbang_powerup();
+	//pmw3610_init();
 
 	uint8_t val = 0;
 
 	int x = 0;
 	int y = 0;
-	int scrollCount = 0;
 
-	int motionVal = 0;
-
-
-	scroll_wheel_init();
-
-	
 	while (1) {
-		scrollCount = 0;
-		x = 0;
-		y = 0;
 
-		val = bitbang_read(0x00);
-		LOG_INF_RATELIMIT_RATE(500, "Product ID (0x3e): %u\n", val);
 		
 		val = bitbang_read(0x02);
 		LOG_INF_RATELIMIT_RATE(500, "Motion Register val: %u\n", val);
 
-		motionVal = gpio_pin_get_dt(&motion_pin);
-		LOG_INF_RATELIMIT_RATE(500, "Motion Pin val: %u\n", motionVal);
-
 		if(val) {
 			getXYMovement_bitbang(&x, &y);
-			// LOG_INF_RATELIMIT_RATE(500, "X Value Returned: %d \n", x);
-			// LOG_INF_RATELIMIT_RATE(500,"Y Value Returned:  %d \n", y);
+
+
+			LOG_INF_RATELIMIT_RATE(500, "X Value Returned: %d \n", x);
+			LOG_INF_RATELIMIT_RATE(500,"Y Value Returned:  %d \n", y);
 
 			x = (int)(x * MOUSE_MOVEMENT_MULTIPLIER);
 			y = (int)(y * MOUSE_MOVEMENT_MULTIPLIER);
 
 
+
+			int err;
 			struct mouse_pos pos;
 			pos.x_val = x;
 			pos.y_val = y;
 
-			
+			mouse_movement_send(x, -y, 0, 0);
 
 		}
-		getScrollUpdate(&scrollCount);
 
-		//LOG_INF_RATELIMIT_RATE(500,"Scroll Count:  %d \n", scrollCount);
 
-		if(scrollCount != 0 || val) {
-			mouse_movement_send(x, -y, prevButtons, scrollCount);
-		}
+		k_usleep(5);
+		/* Battery level simulation */
 
-		
-
-		k_usleep(500);
 		//bas_notify();
 	}
 }
