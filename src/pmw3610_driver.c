@@ -2,7 +2,7 @@
 
 
 const struct gpio_dt_spec cs_pin = GPIO_DT_SPEC_GET(DT_NODELABEL(cs), gpios);
-const struct gpio_dt_spec motion_pin = GPIO_DT_SPEC_GET(DT_NODELABEL(motion), gpios);
+//const struct gpio_dt_spec motion_pin = GPIO_DT_SPEC_GET(DT_NODELABEL(motion), gpios);
 
 const struct gpio_dt_spec sdio_pin = GPIO_DT_SPEC_GET(DT_NODELABEL(sdio), gpios);
 const struct gpio_dt_spec sclk_pin = GPIO_DT_SPEC_GET(DT_NODELABEL(sclk), gpios);
@@ -278,11 +278,7 @@ void pmw3610_init() {
     if (!gpio_is_ready_dt(&sclk_pin)) {
     	return;
 	}
-	if (!gpio_is_ready_dt(&motion_pin)) {
-    	return;
-	}
-
-	gpio_pin_configure_dt(&motion_pin, GPIO_INPUT);
+	
 	gpio_pin_configure_dt(&cs_pin, GPIO_OUTPUT_INACTIVE);
 	gpio_pin_configure_dt(&sclk_pin, GPIO_OUTPUT_ACTIVE);
 	gpio_pin_configure_dt(&sdio_pin, GPIO_OUTPUT_INACTIVE);

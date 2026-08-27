@@ -110,7 +110,17 @@ struct mouse_pos {
 
 uint8_t prevButtons = 0;
 
-bool sleepMode = false;
+
+
+const int AWAKE_SAMPLING_TIMEOUT_US = 500;
+const int SLEEP1_SAMPLING_TIMEOUT_US = 5000;
+
+volatile int SLEEP_TIMEOUT_US = 500;
+volatile int ticksSinceLastMotion = 0;
+
+const struct gpio_dt_spec motion_pin = GPIO_DT_SPEC_GET(DT_NODELABEL(motion), gpios);
+static struct gpio_callback motion_cb_data;
+
 
 //const struct gpio_dt_spec buttonPin1 = GPIO_DT_SPEC_GET(DT_NODELABEL(sdio), gpios);
 //const struct gpio_dt_spec buttonPin2 = GPIO_DT_SPEC_GET(DT_NODELABEL(sclk), gpios);
@@ -777,6 +787,13 @@ static void bas_notify(void)
 	bt_bas_set_battery_level(battery_level);
 }
 
+void motion_pin_active(const struct device *dev, struct gpio_callback *cb, uint32_t pins) {
+
+	ticksSinceLastMotion = 0;
+	SLEEP_TIMEOUT_US = AWAKE_SAMPLING_TIMEOUT_US;
+
+}
+
 
 int main(void)
 {
@@ -842,6 +859,18 @@ int main(void)
 
 	scroll_wheel_init();
 
+
+	if (!gpio_is_ready_dt(&motion_pin)) {
+    	return;
+	}
+
+	gpio_pin_configure_dt(&motion_pin, GPIO_INPUT);
+	gpio_pin_interrupt_configure_dt(&motion_pin,
+					      GPIO_INT_EDGE_RISING);
+
+	gpio_init_callback(&motion_cb_data, motion_pin_active, BIT(motion_pin.pin));
+	gpio_add_callback(motion_pin.port, &motion_cb_data);
+
 	
 	while (1) {
 		scrollCount = 0;
@@ -883,7 +912,7 @@ int main(void)
 
 		
 
-		k_usleep(500);
+		k_usleep(SLEEP_TIMEOUT_US);
 		//bas_notify();
 	}
 }

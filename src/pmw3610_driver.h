@@ -42,7 +42,7 @@
 // bool smart_flag = true;
 
 extern const struct gpio_dt_spec cs_pin;
-extern const struct gpio_dt_spec motion_pin;
+//extern const struct gpio_dt_spec motion_pin;
 
 extern const struct gpio_dt_spec sdio_pin;
 extern const struct gpio_dt_spec sclk_pin;
