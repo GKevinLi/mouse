@@ -124,7 +124,7 @@ volatile int ticksSinceLastMotion = 0;
 const struct gpio_dt_spec motion_pin = GPIO_DT_SPEC_GET(DT_NODELABEL(motion), gpios);
 static struct gpio_callback motion_cb_data;
 
-const struct gpio_dt_spec side_button_1 = GPIO_DT_SPEC_GET(DT_NODELABEL(button3), gpios);
+const struct gpio_dt_spec side_button_1 = GPIO_DT_SPEC_GET(DT_NODELABEL(side_button_1), gpios);
 static struct gpio_callback sb1_cb_data;
 
 

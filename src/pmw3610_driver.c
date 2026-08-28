@@ -129,7 +129,7 @@ void pmw3610_change_page() {
 	if(registerVal == 0x00) {
 		bitbang_write(0x7f, 0xFF);
 	}
-	else if(registerVal = 0xFF) {
+	else if(registerVal == 0xFF) {
 		bitbang_write(0x7f, 0x00);
 	}
 
