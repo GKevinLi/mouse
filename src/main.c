@@ -112,14 +112,20 @@ uint8_t prevButtons = 0;
 
 
 
+bool deepSleep = false;
 const int AWAKE_SAMPLING_TIMEOUT_US = 500;
 const int SLEEP1_SAMPLING_TIMEOUT_US = 5000;
+
+static struct k_thread *main_thread;
 
 volatile int SLEEP_TIMEOUT_US = 500;
 volatile int ticksSinceLastMotion = 0;
 
 const struct gpio_dt_spec motion_pin = GPIO_DT_SPEC_GET(DT_NODELABEL(motion), gpios);
 static struct gpio_callback motion_cb_data;
+
+const struct gpio_dt_spec side_button_1 = GPIO_DT_SPEC_GET(DT_NODELABEL(button3), gpios);
+static struct gpio_callback sb1_cb_data;
 
 
 //const struct gpio_dt_spec buttonPin1 = GPIO_DT_SPEC_GET(DT_NODELABEL(sdio), gpios);
@@ -806,6 +812,8 @@ void motion_pin_active(const struct device *dev, struct gpio_callback *cb, uint3
 
 	ticksSinceLastMotion = 0;
 	SLEEP_TIMEOUT_US = AWAKE_SAMPLING_TIMEOUT_US;
+	deepSleep = false;
+	k_thread_resume(main_thread);
 
 }
 
@@ -813,6 +821,7 @@ void motion_pin_active(const struct device *dev, struct gpio_callback *cb, uint3
 int main(void)
 {
 	int err;
+	main_thread = k_current_get(); 
 
 	printk("Starting Bluetooth Peripheral HIDS mouse sample\n");
 
@@ -879,12 +888,16 @@ int main(void)
     	return;
 	}
 
+	//Set up motion pin interrupt
+
 	gpio_pin_configure_dt(&motion_pin, GPIO_INPUT);
 	gpio_pin_interrupt_configure_dt(&motion_pin,
-					      GPIO_INT_EDGE_RISING);
+					      GPIO_INT_EDGE_TO_ACTIVE | GPIO_INT_WAKEUP);
 
 	gpio_init_callback(&motion_cb_data, motion_pin_active, BIT(motion_pin.pin));
 	gpio_add_callback(motion_pin.port, &motion_cb_data);
+
+
 
 	
 	while (1) {
@@ -923,6 +936,10 @@ int main(void)
 				SLEEP_TIMEOUT_US = SLEEP1_SAMPLING_TIMEOUT_US;
 				ticksSinceLastMotion = 0;
 			}
+			if(ticksSinceLastMotion >= 36000 && SLEEP_TIMEOUT_US == SLEEP1_SAMPLING_TIMEOUT_US) {
+				deepSleep = true;
+				ticksSinceLastMotion = 0;
+			}
 
 		}
 		getScrollUpdate(&scrollCount);
@@ -934,8 +951,12 @@ int main(void)
 		}
 
 		
-
-		k_usleep(SLEEP_TIMEOUT_US);
+		if(!deepSleep) {
+			k_usleep(SLEEP_TIMEOUT_US);
+		}
+		else {
+			k_thread_suspend(main_thread);
+		}
 		//bas_notify();
 	}
 }

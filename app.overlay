@@ -26,6 +26,18 @@
 			gpios = <&gpio0 9 GPIO_ACTIVE_HIGH>;
 		};
 
+		button3: button_3 {
+			gpios = <&gpio0 4 (GPIO_PULL_UP | GPIO_ACTIVE_LOW)>;
+			label = "Push button switch 3";
+			zephyr,code = <INPUT_KEY_3>;
+		};
+
+		button4: button_4 {
+			gpios = <&gpio0 20 (GPIO_PULL_UP | GPIO_ACTIVE_LOW)>;
+			label = "Push button switch 4";
+			zephyr,code = <INPUT_KEY_4>;
+		};
+
 
 	};
 
@@ -50,21 +62,10 @@
 			zephyr,code = <INPUT_KEY_2>;
 		};
 
-		button3: button_3 {
-			gpios = <&gpio0 4 (GPIO_PULL_UP | GPIO_ACTIVE_LOW)>;
-			label = "Push button switch 3";
-			zephyr,code = <INPUT_KEY_3>;
-		};
-
-		button4: button_4 {
-			gpios = <&gpio0 20 (GPIO_PULL_UP | GPIO_ACTIVE_LOW)>;
-			label = "Push button switch 4";
-			zephyr,code = <INPUT_KEY_4>;
-		};
 	};
 
 	aliases {
-		
+
 		sw4 = &button4;
 
 	};
