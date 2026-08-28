@@ -599,7 +599,7 @@ static void hid_init(void)
 }
 
 
-static void mouse_movement_send(int16_t x_delta, int16_t y_delta, uint8_t buttons, uint8_t scrollWheel)
+static void mouse_movement_send(int16_t x_delta, int16_t y_delta, uint8_t buttons, uint8_t scrollWheel, uint8_t media)
 {
 	for (size_t i = 0; i < ARRAY_SIZE(conn_mode); i++) {
 
@@ -662,6 +662,21 @@ static void mouse_movement_send(int16_t x_delta, int16_t y_delta, uint8_t button
 			}
 			prevButtons = buttons;
 
+
+			// uint8_t buffer3 = 0;
+
+			// bt_hids_inp_rep_send(&hids_obj, conn_mode[i].conn,
+			// 			  INPUT_REP_MPLAYER_INDEX,
+			// 			  buffer3, sizeof(buffer3), NULL);
+
+
+
+
+			//Send Other Data???? maybe
+
+
+
+
 		}
 	}
 }
@@ -672,7 +687,7 @@ static void mouse_handler(struct k_work *work)
 	struct mouse_pos pos;
 	while (!k_msgq_get(&hids_queue, &pos, K_NO_WAIT)) {
 
-		mouse_movement_send(pos.x_val, pos.y_val, pos.buttons, 0);
+		mouse_movement_send(pos.x_val, pos.y_val, pos.buttons, 0, 0);
 	}
 }
 
@@ -902,12 +917,20 @@ int main(void)
 			
 
 		}
+		else {
+			ticksSinceLastMotion++;
+			if(ticksSinceLastMotion >= 10000 && SLEEP_TIMEOUT_US == AWAKE_SAMPLING_TIMEOUT_US) {
+				SLEEP_TIMEOUT_US = SLEEP1_SAMPLING_TIMEOUT_US;
+				ticksSinceLastMotion = 0;
+			}
+
+		}
 		getScrollUpdate(&scrollCount);
 
 		//LOG_INF_RATELIMIT_RATE(500,"Scroll Count:  %d \n", scrollCount);
 
 		if(scrollCount != 0 || val) {
-			mouse_movement_send(x, -y, prevButtons, scrollCount);
+			mouse_movement_send(x, -y, prevButtons, scrollCount, 0);
 		}
 
 		
