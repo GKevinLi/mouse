@@ -141,6 +141,9 @@ void pmw3610_change_cpi(int cpi_value) {
 	if(cpi_value > 3200) {
 		cpi_value = 3200;
 	}
+	if(cpi_value < 200) {
+		cpi_value = 200;
+	}
 
 	cpi_value = cpi_value / 200;
 

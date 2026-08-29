@@ -126,6 +126,18 @@ static struct gpio_callback motion_cb_data;
 
 const struct gpio_dt_spec side_button_1 = GPIO_DT_SPEC_GET(DT_NODELABEL(side_button_1), gpios);
 static struct gpio_callback sb1_cb_data;
+int sb1_config_id = 1;
+
+const struct gpio_dt_spec side_button_2 = GPIO_DT_SPEC_GET(DT_NODELABEL(side_button_2), gpios);
+static struct gpio_callback sb2_cb_data;
+int sb2_config_id = 1;
+
+/*
+side button configs
+1: Raise CPI by 1 increment (200)
+2: Lower CPI by 1 increment (200)
+
+*/
 
 
 //const struct gpio_dt_spec buttonPin1 = GPIO_DT_SPEC_GET(DT_NODELABEL(sdio), gpios);
@@ -817,6 +829,47 @@ void motion_pin_active(const struct device *dev, struct gpio_callback *cb, uint3
 
 }
 
+void sidebutton_1_pressed(const struct device *dev, struct gpio_callback *cb, uint32_t pins) {
+
+	if(sb1_config_id == 1) {
+		int cpi = pmw3610_get_cpi();
+		cpi += 200;
+		LOG_INF_RATELIMIT_RATE(500, "New CPI: %d\n", cpi);
+		pmw3610_change_cpi(cpi);
+
+	}
+
+	if(sb1_config_id == 2) {
+		int cpi = pmw3610_get_cpi();
+		cpi -= 200;
+		LOG_INF_RATELIMIT_RATE(500, "New CPI: %d\n", cpi);
+		pmw3610_change_cpi(cpi);
+	}
+	
+
+}
+
+
+void sidebutton_2_pressed(const struct device *dev, struct gpio_callback *cb, uint32_t pins) {
+
+	if(sb1_config_id == 1) {
+		int cpi = pmw3610_get_cpi();
+		cpi += 200;
+		LOG_INF_RATELIMIT_RATE(500, "New CPI: %d\n", cpi);
+		pmw3610_change_cpi(cpi);
+
+	}
+
+	if(sb1_config_id == 2) {
+		int cpi = pmw3610_get_cpi();
+		cpi -= 200;
+		LOG_INF_RATELIMIT_RATE(500, "New CPI: %d\n", cpi);
+		pmw3610_change_cpi(cpi);
+	}
+	
+
+}
+
 
 int main(void)
 {
@@ -896,6 +949,27 @@ int main(void)
 
 	gpio_init_callback(&motion_cb_data, motion_pin_active, BIT(motion_pin.pin));
 	gpio_add_callback(motion_pin.port, &motion_cb_data);
+
+
+	//Set up side button interrupts
+
+	gpio_pin_configure_dt(&side_button_1, GPIO_INPUT);
+	gpio_pin_interrupt_configure_dt(&side_button_1,
+					      GPIO_INT_EDGE_FALLING);
+
+	gpio_init_callback(&sb1_cb_data, sidebutton_1_pressed, BIT(side_button_1.pin));
+	gpio_add_callback(side_button_1.port, &sb1_cb_data);
+
+
+	// gpio_pin_configure_dt(&side_button_2, GPIO_INPUT);
+	// gpio_pin_interrupt_configure_dt(&side_button_2,
+	// 				      GPIO_INT_EDGE_FALLING);
+
+	// gpio_init_callback(&sb2_cb_data, sidebutton_2_pressed, BIT(side_button_2.pin));
+	// gpio_add_callback(side_button_2.port, &sb2_cb_data);
+
+
+
 
 
 
