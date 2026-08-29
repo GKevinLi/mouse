@@ -126,16 +126,21 @@ static struct gpio_callback motion_cb_data;
 
 const struct gpio_dt_spec side_button_1 = GPIO_DT_SPEC_GET(DT_NODELABEL(side_button_1), gpios);
 static struct gpio_callback sb1_cb_data;
-int sb1_config_id = 1;
+int sb1_config_id = 3;
 
 const struct gpio_dt_spec side_button_2 = GPIO_DT_SPEC_GET(DT_NODELABEL(side_button_2), gpios);
 static struct gpio_callback sb2_cb_data;
 int sb2_config_id = 1;
 
+volatile uint8_t mediaCtrls;
+
 /*
 side button configs
 1: Raise CPI by 1 increment (200)
 2: Lower CPI by 1 increment (200)
+3: Volume Up 1
+4: Volume Down 1
+5: Play/Pause
 
 */
 
@@ -680,14 +685,16 @@ static void mouse_movement_send(int16_t x_delta, int16_t y_delta, uint8_t button
 			}
 			prevButtons = buttons;
 
+			if(media != 0) {
 
-			// uint8_t buffer3 = 0;
+				uint8_t buffer3[1];
+				buffer3[0] = media;
 
-			// bt_hids_inp_rep_send(&hids_obj, conn_mode[i].conn,
-			// 			  INPUT_REP_MPLAYER_INDEX,
-			// 			  buffer3, sizeof(buffer3), NULL);
+				bt_hids_inp_rep_send(&hids_obj, conn_mode[i].conn,
+						  INPUT_REP_MPLAYER_INDEX,
+						  buffer3, sizeof(buffer3), NULL);
 
-
+			}
 
 
 			//Send Other Data???? maybe
@@ -845,6 +852,21 @@ void sidebutton_1_pressed(const struct device *dev, struct gpio_callback *cb, ui
 		LOG_INF_RATELIMIT_RATE(500, "New CPI: %d\n", cpi);
 		pmw3610_change_cpi(cpi);
 	}
+
+	if(sb1_config_id == 3) {
+		mediaCtrls |= (1 << 5);
+
+	}
+
+	if(sb1_config_id == 4) {
+		mediaCtrls |= (1 << 4);
+
+	}
+
+	if(sb1_config_id == 5) {
+		mediaCtrls |= (1);
+
+	}
 	
 
 }
@@ -852,7 +874,7 @@ void sidebutton_1_pressed(const struct device *dev, struct gpio_callback *cb, ui
 
 void sidebutton_2_pressed(const struct device *dev, struct gpio_callback *cb, uint32_t pins) {
 
-	if(sb1_config_id == 1) {
+	if(sb2_config_id == 1) {
 		int cpi = pmw3610_get_cpi();
 		cpi += 200;
 		LOG_INF_RATELIMIT_RATE(500, "New CPI: %d\n", cpi);
@@ -860,11 +882,26 @@ void sidebutton_2_pressed(const struct device *dev, struct gpio_callback *cb, ui
 
 	}
 
-	if(sb1_config_id == 2) {
+	if(sb2_config_id == 2) {
 		int cpi = pmw3610_get_cpi();
 		cpi -= 200;
 		LOG_INF_RATELIMIT_RATE(500, "New CPI: %d\n", cpi);
 		pmw3610_change_cpi(cpi);
+	}
+
+	if(sb2_config_id == 3) {
+		mediaCtrls |= (1 << 5);
+
+	}
+
+	if(sb2_config_id == 4) {
+		mediaCtrls |= (1 << 4);
+		
+	}
+
+	if(sb2_config_id == 5) {
+		mediaCtrls |= (1);
+
 	}
 	
 
@@ -1020,10 +1057,10 @@ int main(void)
 
 		//LOG_INF_RATELIMIT_RATE(500,"Scroll Count:  %d \n", scrollCount);
 
-		if(scrollCount != 0 || val) {
-			mouse_movement_send(x, -y, prevButtons, scrollCount, 0);
+		if(scrollCount != 0 || val || mediaCtrls != 0) {
+			mouse_movement_send(x, -y, prevButtons, scrollCount, mediaCtrls);
 		}
-
+		mediaCtrls = 0;
 		
 		if(!deepSleep) {
 			k_usleep(SLEEP_TIMEOUT_US);
@@ -1031,6 +1068,9 @@ int main(void)
 		else {
 			k_thread_suspend(main_thread);
 		}
+		
+
+
 		//bas_notify();
 	}
 }
