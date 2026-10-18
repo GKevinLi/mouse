@@ -95,6 +95,8 @@ LOG_MODULE_REGISTER(MOUSLOG,LOG_LEVEL_DBG);
 /* Timeout for low duty directed advertising (2 seconds). */
 #define LOW_DUTY_DIRECTED_ADV_TIMEOUT_MS 2000
 
+#define PMW3610_DEFAULT_CPI 1200
+
 /* HIDS instance. */
 BT_HIDS_DEF(hids_obj,
 	    INPUT_REP_BUTTONS_LEN,
@@ -126,11 +128,16 @@ static struct gpio_callback motion_cb_data;
 
 const struct gpio_dt_spec side_button_1 = GPIO_DT_SPEC_GET(DT_NODELABEL(side_button_1), gpios);
 static struct gpio_callback sb1_cb_data;
-int sb1_config_id = 3;
+int sb1_config_id = 2;
 
 const struct gpio_dt_spec side_button_2 = GPIO_DT_SPEC_GET(DT_NODELABEL(side_button_2), gpios);
 static struct gpio_callback sb2_cb_data;
 int sb2_config_id = 1;
+
+//BUTTON DEBOUNCING
+
+volatile unsigned long last_interrupt_time = 0;
+const unsigned long DEBOUNCE_DELAY_MS = 15;
 
 volatile uint8_t mediaCtrls;
 
@@ -830,14 +837,21 @@ static void bas_notify(void)
 void motion_pin_active(const struct device *dev, struct gpio_callback *cb, uint32_t pins) {
 
 	ticksSinceLastMotion = 0;
+	int prevTimeout = SLEEP_TIMEOUT_US;
 	SLEEP_TIMEOUT_US = AWAKE_SAMPLING_TIMEOUT_US;
 	deepSleep = false;
-	k_thread_resume(main_thread);
+	if(prevTimeout != AWAKE_SAMPLING_TIMEOUT_US) {
+		k_thread_resume(main_thread);
+	}
+	//k_thread_resume(main_thread);
 
 }
 
 void sidebutton_1_pressed(const struct device *dev, struct gpio_callback *cb, uint32_t pins) {
 
+	int64_t curTime = k_uptime_get();
+	if(curTime - last_interrupt_time > DEBOUNCE_DELAY_MS) {
+		last_interrupt_time = curTime;
 	if(sb1_config_id == 1) {
 		int cpi = pmw3610_get_cpi();
 		cpi += 200;
@@ -867,12 +881,18 @@ void sidebutton_1_pressed(const struct device *dev, struct gpio_callback *cb, ui
 		mediaCtrls |= (1);
 
 	}
+
+	}
+	else {
+		LOG_INF_RATELIMIT_RATE(500, "Button press debounced\n");
+	}
 	
 
 }
 
 
 void sidebutton_2_pressed(const struct device *dev, struct gpio_callback *cb, uint32_t pins) {
+
 
 	if(sb2_config_id == 1) {
 		int cpi = pmw3610_get_cpi();
@@ -961,6 +981,7 @@ int main(void)
 
 
 	pmw3610_init();
+	pmw3610_change_cpi(PMW3610_DEFAULT_CPI);
 
 	uint8_t val = 0;
 
@@ -992,7 +1013,7 @@ int main(void)
 
 	gpio_pin_configure_dt(&side_button_1, GPIO_INPUT);
 	gpio_pin_interrupt_configure_dt(&side_button_1,
-					      GPIO_INT_EDGE_FALLING);
+					      GPIO_INT_EDGE_TO_ACTIVE);
 
 	gpio_init_callback(&sb1_cb_data, sidebutton_1_pressed, BIT(side_button_1.pin));
 	gpio_add_callback(side_button_1.port, &sb1_cb_data);
@@ -1005,7 +1026,7 @@ int main(void)
 	// gpio_init_callback(&sb2_cb_data, sidebutton_2_pressed, BIT(side_button_2.pin));
 	// gpio_add_callback(side_button_2.port, &sb2_cb_data);
 
-
+	last_interrupt_time = k_uptime_get();
 
 
 
@@ -1025,7 +1046,7 @@ int main(void)
 		motionVal = gpio_pin_get_dt(&motion_pin);
 		LOG_INF_RATELIMIT_RATE(500, "Motion Pin val: %u\n", motionVal);
 
-		if(val) {
+		if(motionVal) {
 			getXYMovement_bitbang(&x, &y);
 			// LOG_INF_RATELIMIT_RATE(500, "X Value Returned: %d \n", x);
 			// LOG_INF_RATELIMIT_RATE(500,"Y Value Returned:  %d \n", y);
@@ -1043,14 +1064,20 @@ int main(void)
 		}
 		else {
 			ticksSinceLastMotion++;
+			LOG_INF_RATELIMIT_RATE(1000, "Ticks since last motion: %d\n", ticksSinceLastMotion);
 			if(ticksSinceLastMotion >= 10000 && SLEEP_TIMEOUT_US == AWAKE_SAMPLING_TIMEOUT_US) {
+				//Shallow Sleep (around 5 seconds of inactivity)
+				LOG_INF_RATELIMIT_RATE(500, "ENTERING SHALLOW SLEEP\n");
 				SLEEP_TIMEOUT_US = SLEEP1_SAMPLING_TIMEOUT_US;
 				ticksSinceLastMotion = 0;
 			}
 			if(ticksSinceLastMotion >= 36000 && SLEEP_TIMEOUT_US == SLEEP1_SAMPLING_TIMEOUT_US) {
+				//Deep Sleep (around 3 mins of inactivity)
+				LOG_INF_RATELIMIT_RATE(500, "ENTERING DEEP SLEEP\n");
 				deepSleep = true;
 				ticksSinceLastMotion = 0;
 			}
+			
 
 		}
 		getScrollUpdate(&scrollCount);
