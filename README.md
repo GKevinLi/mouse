@@ -10,6 +10,8 @@ The only parts of this mouse that aren't custom are the battery and the various 
 
 This design can be used with any mouse switch, as long as it has dimensions of 12.8 x 5.8 x 6.5, and any 11mm mouse encoder. 6x6x7.3 silent switches theoretically should be able to work on this design as well, albeit with a few CAD modifications.
 
+For more information on specific parts of the project, refer to the folder-specific READMEs in the cad, firmware, and pcb folders.
+
 ## Features
 
 - PMW3610 Mouse Sensor
@@ -31,6 +33,23 @@ This design can be used with any mouse switch, as long as it has dimensions of 1
 | M2 Screws | 6 |  |  |  |
 | **Total Price (USD)** | | **$164.48** | | |
 
+To build the mouse fully, you will need a soldering iron (and some soldering experience), an SWD debugger, and access to a 3D printer. The links given in the BOM are just recommendations. The battery is optional and the mouse can be used via USB power without it.
+
+
+## Building tips / Notes:
+- This project is currently in a very early stage of development, so building this is not recommended at this time. Only try to build this yourself if you REALLY know what you are doing. It is possible that your project may not work due to some oversight I haven't found yet.
+- I am a very busy college student so updates on this may be slow.
+- There are probably many issues with this design that I have not discovered yet. Documented issues will be in the folder-specific READMEs.
+- The current board design has several major issues. These will have to either be fixed in KiCad or by modifying the assembled board. A corrected version of the design will be made.... eventually, but for now I have documented the issues in the PCB folder's readme file.
+- The current mouse case does not have side buttons. These will be added later as well.
+- The current mouse case does not support mouse skates.
+- To build this, you will have to order your own boards from JLCPCB or another PCB manufacturer. Instructions for this will not be provided at the moment, since the board design has issues anyway. If you have enough experience to fix them then you probably have enough experience to order the boards by yourself as well.
+- There is currently not a lot of documentation on this project. This is just a fun personal project of mine at the moment, and I do not have that much time to consistently work on it. I will update this in the future, though.
+- THIS IS NOT (currently) A GOOD MOUSE. Do not expect this project, in its current form, to be better than whatever mouse you personally own.
+
+## Credits:
+https://github.com/badjeff/leylabella for CAD references
+https://github.com/siderakb/pmw3610-pcb for a PMW3610 schematic reference
 
 
 
