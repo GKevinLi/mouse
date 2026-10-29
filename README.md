@@ -49,6 +49,7 @@ To build the mouse fully, you will need a soldering iron (and some soldering exp
 
 ## Credits:
 https://github.com/badjeff/leylabella for CAD references
+
 https://github.com/siderakb/pmw3610-pcb for a PMW3610 schematic reference
 
 
