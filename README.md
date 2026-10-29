@@ -12,7 +12,10 @@ The only parts of this mouse that aren't custom are the battery and the various 
 
 This design can be used with any mouse switch, as long as it has dimensions of 12.8 x 5.8 x 6.5, and any 11mm mouse encoder. 6x6x7.3 silent switches theoretically should be able to work on this design as well, albeit with a few CAD modifications.
 
-For more information on specific parts of the project, refer to the folder-specific READMEs in the cad, firmware, and pcb folders.
+For more information on specific parts of the project, refer to the folder-specific READMEs in the cad, firmware, and pcb folders.\
+CAD Readme: [Link](<https://github.com/GKevinLi/mouse/blob/main/cad/README.md>)\
+Firmware Readme:  [Link](<https://github.com/GKevinLi/mouse/blob/main/firmware/README.md>)\
+PCBs Readme:  [Link](<https://github.com/GKevinLi/mouse/blob/main/pcb/README.md>)
 
 ## Features
 
