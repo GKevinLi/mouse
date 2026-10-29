@@ -52,6 +52,7 @@ https://github.com/badjeff/leylabella for CAD references
 
 https://github.com/siderakb/pmw3610-pcb for a PMW3610 schematic reference
 
+https://github.com/wareya/DIY-Gaming-Mouse for PCB design and CAD references
 
 
 
