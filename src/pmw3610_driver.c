@@ -146,12 +146,12 @@ void pmw3610_change_cpi(int cpi_value) {
 	}
 
 	cpi_value = cpi_value / 200;
-
+	pmw3610_change_page();
 	uint8_t prev_value = bitbang_read(0x85);
 	prev_value = (prev_value >> 5) << 5;
 
 	pmw3610_spi_on();
-	pmw3610_change_page();
+	
 
 	uint8_t write_value = (prev_value | cpi_value);
 	bitbang_write(0x85, write_value);
@@ -164,8 +164,10 @@ void pmw3610_change_cpi(int cpi_value) {
 
 int pmw3610_get_cpi() {
 
+	pmw3610_change_page();
 	uint8_t cpi_value_raw = bitbang_read(0x85);
 	int cpi_value = (cpi_value_raw & 0x1F) * 200;
+	pmw3610_change_page();
 	return cpi_value;
 
 }

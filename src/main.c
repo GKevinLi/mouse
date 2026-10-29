@@ -118,10 +118,13 @@ bool deepSleep = false;
 const int AWAKE_SAMPLING_TIMEOUT_US = 500;
 const int SLEEP1_SAMPLING_TIMEOUT_US = 5000;
 
-static struct k_thread *main_thread;
+/* Given by the motion pin ISR. A semaphore (unlike suspend/resume) remembers a
+ * wakeup that arrives before the main loop starts waiting, so none are lost.
+ */
+K_SEM_DEFINE(motion_sem, 0, 1);
 
-volatile int SLEEP_TIMEOUT_US = 500;
-volatile int ticksSinceLastMotion = 0;
+int SLEEP_TIMEOUT_US = 500;
+int ticksSinceLastMotion = 0;
 
 const struct gpio_dt_spec motion_pin = GPIO_DT_SPEC_GET(DT_NODELABEL(motion), gpios);
 static struct gpio_callback motion_cb_data;
@@ -836,14 +839,10 @@ static void bas_notify(void)
 
 void motion_pin_active(const struct device *dev, struct gpio_callback *cb, uint32_t pins) {
 
-	ticksSinceLastMotion = 0;
-	int prevTimeout = SLEEP_TIMEOUT_US;
-	SLEEP_TIMEOUT_US = AWAKE_SAMPLING_TIMEOUT_US;
-	deepSleep = false;
-	if(prevTimeout != AWAKE_SAMPLING_TIMEOUT_US) {
-		k_thread_resume(main_thread);
-	}
-	//k_thread_resume(main_thread);
+	/* Only wake the main loop; it reads the Motion register and updates the
+	 * sleep state itself.
+	 */
+	k_sem_give(&motion_sem);
 
 }
 
@@ -931,7 +930,6 @@ void sidebutton_2_pressed(const struct device *dev, struct gpio_callback *cb, ui
 int main(void)
 {
 	int err;
-	main_thread = k_current_get(); 
 
 	printk("Starting Bluetooth Peripheral HIDS mouse sample\n");
 
@@ -984,6 +982,7 @@ int main(void)
 	pmw3610_change_cpi(PMW3610_DEFAULT_CPI);
 
 	uint8_t val = 0;
+	uint8_t motionReg = 0;
 
 	int x = 0;
 	int y = 0;
@@ -1040,13 +1039,21 @@ int main(void)
 		val = bitbang_read(0x00);
 		LOG_INF_RATELIMIT_RATE(500, "Product ID (0x3e): %u\n", val);
 		
-		val = bitbang_read(0x02);
-		LOG_INF_RATELIMIT_RATE(500, "Motion Register val: %u\n", val);
+		/* Reading Motion freezes the delta registers; its MOT bit (not the
+		 * pin) decides whether they hold new data.
+		 */
+		motionReg = bitbang_read(PMW3610_MOTION);
+		LOG_INF_RATELIMIT_RATE(500, "Motion Register val: %u\n", motionReg);
 
 		motionVal = gpio_pin_get_dt(&motion_pin);
 		LOG_INF_RATELIMIT_RATE(500, "Motion Pin val: %u\n", motionVal);
 
-		if(motionVal) {
+		if(motionReg & 0x80) {
+			ticksSinceLastMotion = 0;
+			SLEEP_TIMEOUT_US = AWAKE_SAMPLING_TIMEOUT_US;
+			deepSleep = false;
+
+
 			getXYMovement_bitbang(&x, &y);
 			// LOG_INF_RATELIMIT_RATE(500, "X Value Returned: %d \n", x);
 			// LOG_INF_RATELIMIT_RATE(500,"Y Value Returned:  %d \n", y);
@@ -1056,8 +1063,8 @@ int main(void)
 
 
 			struct mouse_pos pos;
-			pos.x_val = x;
-			pos.y_val = y;
+			pos.x_val = -x;
+			pos.y_val = -y;
 
 			
 
@@ -1084,16 +1091,25 @@ int main(void)
 
 		//LOG_INF_RATELIMIT_RATE(500,"Scroll Count:  %d \n", scrollCount);
 
-		if(scrollCount != 0 || val || mediaCtrls != 0) {
+		if(scrollCount != 0 || x != 0 || y != 0 || mediaCtrls != 0) {
 			mouse_movement_send(x, -y, prevButtons, scrollCount, mediaCtrls);
 		}
 		mediaCtrls = 0;
-		
+
 		if(!deepSleep) {
-			k_usleep(SLEEP_TIMEOUT_US);
+			/* Motion interrupt ends the wait early (e.g. in shallow sleep). */
+			k_sem_take(&motion_sem, K_USEC(SLEEP_TIMEOUT_US));
 		}
 		else {
-			k_thread_suspend(main_thread);
+			/* Drop stale gives, then block only if no motion is pending. The
+			 * pin stays asserted until the deltas are read, so if it is already
+			 * active no new edge will come; an edge after the reset is kept by
+			 * the semaphore.
+			 */
+			k_sem_reset(&motion_sem);
+			if(!gpio_pin_get_dt(&motion_pin)) {
+				k_sem_take(&motion_sem, K_FOREVER);
+			}
 		}
 		
 
