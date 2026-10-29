@@ -2,6 +2,8 @@
 # Mouse: A custom wireless Bluetooth mouse
 
 <img width="540" height="720" alt="image" src="https://github.com/user-attachments/assets/cc9708f0-7d79-4880-818b-fae2d2e470ff" />
+<img width="540" height="720" alt="image" src="https://github.com/user-attachments/assets/9a8d489d-7f8e-400d-b5b6-44fb327d2e98" />
+
 
 There is no cool name for it. I'm not good at naming things.
 
